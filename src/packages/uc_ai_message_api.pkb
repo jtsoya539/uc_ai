@@ -52,26 +52,17 @@ create or replace package body uc_ai_message_api as
 
   function create_file_content(
     p_media_type in varchar2,
-    p_data_blob in blob, --@dblinter ignore(g-7150): not unused, just in conditional compilation
+    p_data_blob in blob,
     p_filename in varchar2 default null,
     p_provider_options in json_object_t default null
   ) return json_object_t
   as
     l_b64 clob;
   begin
-    $if wwv_flow_api.c_current < 20231031 $then
-      -- APEX version < 21.1
-      l_b64 := apex_web_service.blob2clobbase64(p_data_blob);
-    $else
-      -- Convert BLOB to Base64 CLOB
-      l_b64 := apex_web_service.blob2clobbase64(
-        p_blob => p_data_blob,
-        p_newlines => 'N',
-        p_padding => 'Y'
-      );
-    $end
+    -- Convert BLOB to Base64 CLOB using custom implementation
+    l_b64 := uc_ai_utils.blob2clobbase64(p_data_blob);
 
-    return create_file_content(p_media_type, l_b64, p_filename, p_provider_options);  
+    return create_file_content(p_media_type, l_b64, p_filename, p_provider_options);
 
   end create_file_content;
 

@@ -294,9 +294,9 @@ create or replace package body uc_ai_openai as
 
     uc_ai_logger.log('Request body', l_scope, l_input_obj.to_clob);
 
-    apex_web_service.clear_request_headers;
-    apex_web_service.g_request_headers(1).name := 'Content-Type';
-    apex_web_service.g_request_headers(1).value := 'application/json';
+    uc_ai_http.clear_request_headers;
+    uc_ai_http.g_request_headers(1).name := 'Content-Type';
+    uc_ai_http.g_request_headers(1).value := 'application/json';
 
     case uc_ai.g_provider_override
       when uc_ai.c_provider_xai then
@@ -308,14 +308,14 @@ create or replace package body uc_ai_openai as
     end case;
 
     if l_web_credential is null then
-      apex_web_service.g_request_headers(2).name := 'Authorization';
-      apex_web_service.g_request_headers(2).value := 'Bearer '||uc_ai_get_key(coalesce(uc_ai.g_provider_override, uc_ai.c_provider_openai));
+      uc_ai_http.g_request_headers(2).name := 'Authorization';
+      uc_ai_http.g_request_headers(2).value := 'Bearer '||uc_ai_get_key(coalesce(uc_ai.g_provider_override, uc_ai.c_provider_openai));
     end if;
 
     l_url := get_generate_text_url;
     uc_ai_logger.log('Calling OpenAI API at ' || l_url || '. Web Credential: ' || nvl(l_web_credential, 'null'), l_scope);
 
-    l_resp := apex_web_service.make_rest_request(
+    l_resp := uc_ai_http.make_rest_request(
       p_url => l_url,
       p_http_method => 'POST',
       p_body => l_input_obj.to_clob,
@@ -669,9 +669,9 @@ create or replace package body uc_ai_openai as
     l_input_obj.put('model', p_model);
     l_input_obj.put('input', p_input);
 
-    apex_web_service.clear_request_headers;
-    apex_web_service.g_request_headers(1).name := 'Content-Type';
-    apex_web_service.g_request_headers(1).value := 'application/json';
+    uc_ai_http.clear_request_headers;
+    uc_ai_http.g_request_headers(1).name := 'Content-Type';
+    uc_ai_http.g_request_headers(1).value := 'application/json';
 
     case uc_ai.g_provider_override
       when uc_ai.c_provider_openrouter then
@@ -682,8 +682,8 @@ create or replace package body uc_ai_openai as
 
 
     if l_web_credential is null then
-      apex_web_service.g_request_headers(2).name := 'Authorization';
-      apex_web_service.g_request_headers(2).value := 'Bearer ' || uc_ai_get_key(coalesce(uc_ai.g_provider_override, uc_ai.c_provider_openai));
+      uc_ai_http.g_request_headers(2).name := 'Authorization';
+      uc_ai_http.g_request_headers(2).value := 'Bearer ' || uc_ai_get_key(coalesce(uc_ai.g_provider_override, uc_ai.c_provider_openai));
     end if;
 
     uc_ai_logger.log('Request body', l_scope, l_input_obj.to_clob);
@@ -691,7 +691,7 @@ create or replace package body uc_ai_openai as
     l_url := get_generate_embeddings_url();
     uc_ai_logger.log('Request URL: ' || l_url, l_scope);
 
-    l_resp := apex_web_service.make_rest_request(
+    l_resp := uc_ai_http.make_rest_request(
       p_url => l_url,
       p_http_method => 'POST',
       p_body => l_input_obj.to_clob,

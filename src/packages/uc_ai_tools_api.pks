@@ -69,8 +69,8 @@ create or replace package uc_ai_tools_api as
     p_active                in uc_ai_tools.active%type default 1,
     p_version               in uc_ai_tools.version%type default '1.0',
     p_authorization_schema  in uc_ai_tools.authorization_schema%type default null,
-    p_created_by            in uc_ai_tools.created_by%type default coalesce(sys_context('APEX$SESSION','app_user'), sys_context('userenv', 'session_user')),
-    p_tags                  in apex_t_varchar2 default apex_t_varchar2()
+    p_created_by            in uc_ai_tools.created_by%type default sys_context('userenv', 'session_user'),
+    p_tags                  in uc_ai_utils.t_varchar2 default uc_ai_utils.t_varchar2()
   ) return uc_ai_tools.id%type;
 
 end uc_ai_tools_api;

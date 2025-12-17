@@ -92,14 +92,12 @@ create or replace package uc_ai_logger authid definer as
     p_params in tab_param default uc_ai_logger.gc_empty_tab_param);
 
   /**
-   * Enable APEX debug logging if you are currently not having an APEX session
-   * You don't need to call this when:
-   *  - you use logger
-   *  - your PL/SQL code using UC AI is called from an APEX application
+   * Enable DBMS_OUTPUT for logging
+   * Call this at the beginning of your session to see log output
    *
-   * @param p_text Debug message text
+   * @param p_buffer_size Buffer size for DBMS_OUTPUT (default 1MB)
    */
-  procedure enable_apex_debug(p_workspace in varchar2);
+  procedure enable_dbms_output(p_buffer_size in integer default 1000000);
 
 end uc_ai_logger;
 /

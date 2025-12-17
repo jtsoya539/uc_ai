@@ -374,7 +374,7 @@ create or replace package body uc_ai_toon as
     l_arr json_array_t;
     l_homogeneous_check r_homogeneous_check_type;
     l_nested clob;
-    l_parts apex_t_varchar2;
+    l_parts uc_ai_utils.t_varchar2;
     l_part varchar2(32767 char);
   begin
     sys.dbms_lob.createtemporary(l_result, true);
@@ -414,7 +414,7 @@ create or replace package body uc_ai_toon as
       if l_element.is_object then
         l_obj := treat(l_element as json_object_t);
         l_nested := process_object(l_obj, p_indent_level + 1);
-        l_parts := apex_string.split(l_nested, chr(10));
+        l_parts := uc_ai_utils.split(l_nested, chr(10));
 
         <<nested_object_parts>>
         for j in 1 .. l_parts.count loop

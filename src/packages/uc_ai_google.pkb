@@ -320,13 +320,13 @@ create or replace package body uc_ai_google as
 
     uc_ai_logger.log('Request body', l_scope, l_input_obj.to_clob);
 
-    apex_web_service.clear_request_headers;
-    apex_web_service.set_request_headers(
+    uc_ai_http.clear_request_headers;
+    uc_ai_http.set_request_headers(
       p_name_01  => 'Content-Type',
       p_value_01 => 'application/json'
     );
 
-    l_resp := apex_web_service.make_rest_request(
+    l_resp := uc_ai_http.make_rest_request(
       p_url => l_api_url,
       p_http_method => 'POST',
       p_body => l_input_obj.to_clob,
@@ -768,8 +768,8 @@ create or replace package body uc_ai_google as
       l_api_url := l_api_url || '?key=' || uc_ai_get_key(uc_ai.c_provider_google);
     end if;
 
-    apex_web_service.clear_request_headers;
-    apex_web_service.set_request_headers(
+    uc_ai_http.clear_request_headers;
+    uc_ai_http.set_request_headers(
       p_name_01  => 'Content-Type',
       p_value_01 => 'application/json'
     );
@@ -777,7 +777,7 @@ create or replace package body uc_ai_google as
     uc_ai_logger.log('Request body', l_scope, l_input_obj.to_clob);
     uc_ai_logger.log('Request URL: ' || l_api_url, l_scope);
 
-    l_resp := apex_web_service.make_rest_request(
+    l_resp := uc_ai_http.make_rest_request(
       p_url => l_api_url,
       p_http_method => 'POST',
       p_body => l_input_obj.to_clob,

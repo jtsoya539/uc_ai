@@ -51,8 +51,7 @@ create or replace package body uc_ai_logger as
   end build_message;
 
   /**
-   * Internal logging procedure with conditional compilation
-   * Handles both logger and apex_debug based on $$USE_LOGGER flag
+   * Internal logging procedure using DBMS_OUTPUT
    *
    * @param p_level Log level: ERROR, WARNING, INFO, DEBUG
    * @param p_text Message text
@@ -67,114 +66,59 @@ create or replace package body uc_ai_logger as
     p_extra in clob,
     p_params in tab_param)
   is
-    $if $$USE_LOGGER $then
-      l_logger_params logger.tab_param;
-    $else
-      l_message clob;
-    $end
+    l_message clob;
+    l_prefix varchar2(20);
   begin
-    $if $$USE_LOGGER $then
-      -- Convert uc_ai_logger params to logger params
-      if p_params.count > 0 then
-        for i in 1 .. p_params.count loop
-          l_logger_params(i).name := p_params(i).name;
-          l_logger_params(i).val := p_params(i).val;
-        end loop;
+    -- Build the complete message
+    l_message := build_message(
+      p_text => p_text,
+      p_scope => p_scope,
+      p_extra => p_extra,
+      p_params => p_params);
+    
+    -- Add level prefix
+    l_prefix := '[' || upper(p_level) || '] ';
+    l_message := l_prefix || l_message;
+    
+    -- Log in chunks of max 32767 characters (DBMS_OUTPUT limit)
+    declare
+      c_max_chunk_size constant pls_integer := 32767;
+      c_indicator_overhead constant pls_integer := 20; -- Reserve space for "[999/999] " indicator
+      l_message_length pls_integer;
+      l_offset pls_integer := 1;
+      l_chunk varchar2(32767 char);
+      l_chunk_num pls_integer := 1;
+      l_total_chunks pls_integer;
+      l_actual_chunk_size pls_integer;
+      l_indicator varchar2(20 char);
+    begin
+      l_message_length := length(l_message);
+      
+      -- Calculate if we need to split and adjust chunk size accordingly
+      if l_message_length > c_max_chunk_size then
+        l_actual_chunk_size := c_max_chunk_size - c_indicator_overhead;
+        l_total_chunks := ceil(l_message_length / l_actual_chunk_size);
+      else
+        l_actual_chunk_size := c_max_chunk_size;
+        l_total_chunks := 1;
       end if;
       
-      -- Call appropriate logger procedure based on level
-      case upper(p_level)
-        when 'ERROR' then
-          logger.log_error(
-            p_text => p_text,
-            p_scope => p_scope,
-            p_extra => p_extra,
-            p_params => l_logger_params);
-        when 'WARNING' then
-          logger.log_warning(
-            p_text => p_text,
-            p_scope => p_scope,
-            p_extra => p_extra,
-            p_params => l_logger_params);
-        when 'INFO' then
-          logger.log_info(
-            p_text => p_text,
-            p_scope => p_scope,
-            p_extra => p_extra,
-            p_params => l_logger_params);
-        when 'DEBUG' then
-          logger.log(
-            p_text => p_text,
-            p_scope => p_scope,
-            p_extra => p_extra,
-            p_params => l_logger_params);
-        else
-          -- Default to debug
-          logger.log(
-            p_text => p_text,
-            p_scope => p_scope,
-            p_extra => p_extra,
-            p_params => l_logger_params);
-      end case;
-    $else
-      -- Use apex_debug
-      l_message := build_message(
-        p_text => p_text,
-        p_scope => p_scope,
-        p_extra => p_extra,
-        p_params => p_params);
-      
-      -- Log in chunks of max 4000 characters
-      declare
-        c_max_chunk_size constant pls_integer := 4000;
-        c_indicator_overhead constant pls_integer := 20; -- Reserve space for "[999/999] " indicator
-        l_message_length pls_integer;
-        l_offset pls_integer := 1;
-        l_chunk varchar2(4000 char);
-        l_chunk_num pls_integer := 1;
-        l_total_chunks pls_integer;
-        l_actual_chunk_size pls_integer;
-        l_indicator varchar2(20 char);
-      begin
-        l_message_length := length(l_message);
+      while l_offset <= l_message_length loop
+        l_chunk := substr(l_message, l_offset, l_actual_chunk_size);
         
-        -- Calculate if we need to split and adjust chunk size accordingly
-        if l_message_length > c_max_chunk_size then
-          l_actual_chunk_size := c_max_chunk_size - c_indicator_overhead;
-          l_total_chunks := ceil(l_message_length / l_actual_chunk_size);
-        else
-          l_actual_chunk_size := c_max_chunk_size;
-          l_total_chunks := 1;
+        -- Add chunk indicator if message is split
+        if l_total_chunks > 1 then
+          l_indicator := '[' || l_chunk_num || '/' || l_total_chunks || '] ';
+          l_chunk := l_indicator || l_chunk;
         end if;
         
-        while l_offset <= l_message_length loop
-          l_chunk := substr(l_message, l_offset, l_actual_chunk_size);
-          
-          -- Add chunk indicator if message is split
-          if l_total_chunks > 1 then
-            l_indicator := '[' || l_chunk_num || '/' || l_total_chunks || '] ';
-            l_chunk := l_indicator || l_chunk;
-          end if;
-          
-          case upper(p_level)
-            when 'ERROR' then
-              apex_debug.error(l_chunk);
-            when 'WARNING' then
-              apex_debug.warn(l_chunk);
-            when 'INFO' then
-              apex_debug.info(l_chunk);
-            when 'DEBUG' then
-              apex_debug.trace(l_chunk);
-            else
-              -- Default to log
-              apex_debug.info(l_chunk);
-          end case;
-          
-          l_offset := l_offset + l_actual_chunk_size;
-          l_chunk_num := l_chunk_num + 1;
-        end loop;
-      end;
-    $end
+        -- Output to DBMS_OUTPUT
+        sys.dbms_output.put_line(l_chunk);
+        
+        l_offset := l_offset + l_actual_chunk_size;
+        l_chunk_num := l_chunk_num + 1;
+      end loop;
+    end;
   end log_internal;
 
   /**
@@ -266,27 +210,13 @@ create or replace package body uc_ai_logger as
       p_params => p_params);
   end log;
 
-  procedure enable_apex_debug(p_workspace in varchar2)
+  procedure enable_dbms_output(p_buffer_size in integer default 1000000)
   as
-    l_sec_group_id number;
   begin
-    -- thanks anton nielsen: https://apexdebug.com/using-apexdebug-without-an-apex-session
-    if sys_context('APEX$SESSION','WORKSPACE_ID') is null then
-      l_sec_group_id := apex_util.find_security_group_id(p_workspace => p_workspace);
-
-      if l_sec_group_id is null then
-        raise_application_error(
-          -20001,
-          'Workspace "' || p_workspace || '" not found. Cannot enable APEX debug.');
-      end if;
-
-      apex_util.set_security_group_id(
-        p_security_group_id => l_sec_group_id
-      );
-
-    end if;
-    apex_debug.enable(apex_debug.c_log_level_app_trace);
-  end enable_apex_debug;
+    -- Enable DBMS_OUTPUT with specified buffer size
+    -- Default is 1MB which should be sufficient for most logging needs
+    sys.dbms_output.enable(p_buffer_size);
+  end enable_dbms_output;
 
 end uc_ai_logger;
 /

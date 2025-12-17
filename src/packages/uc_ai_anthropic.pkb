@@ -301,19 +301,19 @@ create or replace package body uc_ai_anthropic as
 
     uc_ai_logger.log('Request body', l_scope, l_input_obj.to_clob);
 
-    apex_web_service.clear_request_headers;
-    apex_web_service.g_request_headers(1).name := 'Content-Type';
-    apex_web_service.g_request_headers(1).value := 'application/json';
-    apex_web_service.g_request_headers(2).name := 'anthropic-version';
-    apex_web_service.g_request_headers(2).value := c_anthropic_version;
+    uc_ai_http.clear_request_headers;
+    uc_ai_http.g_request_headers(1).name := 'Content-Type';
+    uc_ai_http.g_request_headers(1).value := 'application/json';
+    uc_ai_http.g_request_headers(2).name := 'anthropic-version';
+    uc_ai_http.g_request_headers(2).value := c_anthropic_version;
 
     l_web_credential := coalesce(uc_ai.g_apex_web_credential, g_apex_web_credential);
     if l_web_credential is null then
-      apex_web_service.g_request_headers(3).name := 'x-api-key';
-      apex_web_service.g_request_headers(3).value := uc_ai_get_key(uc_ai.c_provider_anthropic);
+      uc_ai_http.g_request_headers(3).name := 'x-api-key';
+      uc_ai_http.g_request_headers(3).value := uc_ai_get_key(uc_ai.c_provider_anthropic);
     end if;
 
-    l_resp := apex_web_service.make_rest_request(
+    l_resp := uc_ai_http.make_rest_request(
       p_url => get_generate_text_url,
       p_http_method => 'POST',
       p_body => l_input_obj.to_clob,
